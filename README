@@ -1,6 +1,7 @@
                             The Gotoos Open Source Project Document
 
 Environment: Ubuntu 13.04
+Date: 2013-8-27
 
 1.Preparation:
 
@@ -33,7 +34,18 @@ $ sudo apt-get install dh-autoreconf
   c.Repo sync:
     $ repo sync -j4
 
-3.Config email:
+3.Install qemu:
+  $ cd external/qemu/XXXX/
+  $ ./configure --target-list=arm-softmmu,arm-linux-user --enable-debug
+  $ make -s
+  $ make install -s
+
+4.Compiler kernel:
+  $ cd kernel
+  $ make ARCH=arm CROSS_COMPILE=arm-eabi- versatile_defconfig -s
+  $ make ARCH=arm CROSS_COMPILE=arm-eabi- uImage -s
+
+5.Config email:
 
 (1).Install mutt and msmtp
 
@@ -75,13 +87,7 @@ $ sudo apt-get install dh-autoreconf
     . send soms peple, cc, attach files:
     $ echo "hello" | mutt -s "title" vogotoos@gmail.com,user2@gmail.com -c user3@gmail.com -a /tmp/ip.tmp
 
-4.Install qemu:
-  $ cd external/qemu/XXXX/
-  $ ./configure --target-list=arm-softmmu,arm-linux-user --enable-debug
-  $ make -s
-  $ make install -s
-
-5.Send patch to us:
+6.Send patch to us:
 
 (1).Modify to files.
 
