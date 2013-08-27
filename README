@@ -4,9 +4,12 @@ Environment: Ubuntu 13.04
 
 1.Preparation:
 
-sudo apt-get install libpci-dev
-sudo apt-get install libsdl1.2-dev
-sudo apt-get install dh-autoreconf
+$ sudo apt-get install git-core gnupg flex bison gperf build-essential zip curl
+$ sudo apt-get install git-cola
+$ sudo apt-get install gitk
+$ sudo apt-get install libpci-dev
+$ sudo apt-get install libsdl1.2-dev
+$ sudo apt-get install dh-autoreconf
 
 2.Get projection:
 
