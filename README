@@ -11,6 +11,7 @@ $ sudo apt-get install gitk
 $ sudo apt-get install libpci-dev
 $ sudo apt-get install libsdl1.2-dev
 $ sudo apt-get install dh-autoreconf
+$ sudo apt-get install uboot-mkimage
 
 2.Get projection:
 
@@ -30,22 +31,94 @@ $ sudo apt-get install dh-autoreconf
   a.Create a directory:
     $ mkdir ~/gotoos
   b.Repo init:
-    $ repo init -u git@github.com/gotoos/manifest.git -b master
+    $ repo init -u https://github.com/gotoos/manifest.git -b master
   c.Repo sync:
     $ repo sync -j4
 
-3.Install qemu:
-  $ cd external/qemu/XXXX/
-  $ ./configure --target-list=arm-softmmu,arm-linux-user --enable-debug
-  $ make -s
-  $ make install -s
+3.Compile qemu:
+  $ cd external/qemu
+  $ ./configure --target-list=arm-softmmu --audio-drv-list=alsa
+  $ make
+  $ sudo make install
 
-4.Compiler kernel:
+4.Compile kernel:
   $ cd kernel
-  $ make ARCH=arm CROSS_COMPILE=arm-eabi- versatile_defconfig -s
-  $ make ARCH=arm CROSS_COMPILE=arm-eabi- uImage -s
+  $ export ARCH=arm
+  $ export SUBARCH=arm
+  $ export CROSS_COMPILE=arm-eabi-
+  $ make versatile_defconfig
+  $ make menuconfig
+  enable eabi menu options
+  kernel Features -->
+  Memory split (3G/1G user/kernel split) --->
+    [ ] Preemptible Kernel (EXPERIMENTAL)
+    [*] Use the ARM EABI to compile the kernel
+    [*] Allow old ABI binaries to run with this kernel (EXPERIMENTAL)
+    [ ] High Memory Support (EXPERIMENTAL)
+        Memory model (Flat Memory) --->
+    [ ] Add LRU list to track non-evictable pages
+        (4096) Low address space to protect from user allocation
+  make kernel:
+  $ make
+  Test:
+  $ qemu-system-arm -M versatilepb -m 128M -kernel zImage
 
-5.Config email:
+5.Compile busybox:
+  url: http://busybox.net/downloads/
+  Build Busybox file system
+  If it can not pass build, usually it is because the version of crosstool (gcc/glib) is not correct.
+  configure the build:
+  $ export ARCH=arm
+  $ export CROSS_COMPILE=arm-none-linux-gnueabi-
+  $ make defconfig
+  $ make menuconfig
+
+  Busybox Settings --> Build Options -->
+    [*] Build BusyBox as a static binary (no shared libs)
+    [ ] Force NOMMU build
+    [*] Build with Large File Support (for accessing files > 2 GB)
+    ()  Cross Compiler prefix
+    ()  Additional CFLAGS
+
+  $ make install
+  $ mkdir rootfs
+  $ mkdir proc sys dev etc etc/init.d
+
+  create the file _install/etc/init.d/rcS
+    #!/bin/sh
+    mount -t proc none /proc
+    mount -t sysfs none /sys
+    /sbin/mdev -s
+
+  and change it to executable:
+  $ chmod +x _install/etc/init.d/rcS
+  $ cp -a _install/* rootfs/
+
+  make the root image:
+  $ cd rootfs
+  $ find . | cpio -o --format=newc > ../rootfs.img
+  $ gzip -c rootfs.img > rootfs.img.gz
+
+  test our new images:
+  $ qemu-system-arm -M versatilepb -m 128M -kernel zImage -initrd rootfs.img.gz -append "root=/dev/ram rdinit=/sbin/init"
+
+6.Compile uboot:
+  Download: url - ftp://ftp.denx.de/pub/u-boot/
+  Build image:
+  $ export CROSS_COMPILE=arm-eabi-
+  $ make versatilepb_config
+  $ make
+  Make U-images:
+  $ mkimage -A arm -C none -O linux -T kernel -d zImage -a 0x00010000 -e 0x00010000 zImage.uimg
+  $ mkimage -A arm -C none -O linux -T ramdisk -d rootfs.img.gz -a 0x00800000 -e 0x00800000 rootfs.uimg
+  $ dd if=/dev/zero of=flash.bin bs=1 count=6M
+  $ dd if=u-boot.bin of=flash.bin conv=notrunc bs=1
+  $ dd if=zImage.uimg of=flash.bin conv=notrunc bs=1 seek=2M
+  $ dd if=rootfs.uimg of=flash.bin conv=notrunc bs=1 seek=4M
+  Boot linux:
+  $ qemu-system-arm -M versatilepb -m 128M -kernel flash.bin -serial stdio
+
+7.Config email:
 
 (1).Install mutt and msmtp
 
@@ -82,12 +155,12 @@ $ sudo apt-get install dh-autoreconf
     c.send test email:
 
     $ msmtp --host=smtp.corpease.net --serverinfo
-    . send a peple:
+    . send to a peple:
     $ echo "hello world" | mutt -s "title" username@gmail.com(can use qq mail).
-    . send soms peple, cc, attach files:
+    . send to soms peples, cc, attach files:
     $ echo "hello" | mutt -s "title" vogotoos@gmail.com,user2@gmail.com -c user3@gmail.com -a /tmp/ip.tmp
 
-6.Send patch to us:
+8.Send patch to us:
 
 (1).Modify to files.
 
