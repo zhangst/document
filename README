@@ -14,6 +14,9 @@ $ sudo apt-get install libsdl1.2-dev
 $ sudo apt-get install dh-autoreconf
 $ sudo apt-get install uboot-mkimage
 
+compiler:
+http://www.mentor.com/embedded-software/sourcery-tools/sourcery-codebench/editions/lite-edition/
+
 2.Get projection:
 
 (1).Download and config repo:
@@ -38,6 +41,10 @@ $ sudo apt-get install uboot-mkimage
     $ repo sync -j4
 Note: if have this error:
     git config --global --add core.compression -1
+    git config --global http.postBuffer 24288000
+    if sync codes very slowly, please set proxy:
+    export https_proxy=https://p.pt.xiaomi.com:3128
+    export http_proxy=https://p.pt.xiaomi.com:3128
 
 3.Compile qemu:
   $ cd external/qemu
