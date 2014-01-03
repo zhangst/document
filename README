@@ -56,7 +56,7 @@ Note: if have this error:
   $ cd kernel
   $ export ARCH=arm
   $ export SUBARCH=arm
-  $ export CROSS_COMPILE=arm-eabi-
+  $ export CROSS_COMPILE=arm-none-eabi-
   $ make versatile_defconfig
   $ make menuconfig
   enable eabi menu options
