@@ -111,7 +111,7 @@ Note: if have this error:
   $ gzip -c rootfs.img > rootfs.img.gz
 
   test our new images:
-  $ qemu-system-arm -M versatilepb -m 128M -kernel zImage -initrd rootfs.img.gz -append "root=/dev/ram rdinit=/sbin/init"
+  $ qemu-system-arm -M versatilepb -m 128M -kernel kernel -initrd ramdisk.img -append "root=/dev/ram rdinit=/init"
 
 6.Compile uboot:
   Download: url - ftp://ftp.denx.de/pub/u-boot/
