@@ -39,12 +39,10 @@ http://www.mentor.com/embedded-software/sourcery-tools/sourcery-codebench/editio
     $ repo init -u https://github.com/gotoos/manifest.git -b master
   c.Repo sync:
     $ repo sync -j4
-Note: if have this error:
+Note: if have error:
     git config --global --add core.compression -1
     git config --global http.postBuffer 24288000
     if sync codes very slowly, please set proxy:
-    export https_proxy=https://p.pt.xiaomi.com:3128
-    export http_proxy=https://p.pt.xiaomi.com:3128
 
 3.Compile qemu:
   $ cd external/qemu
