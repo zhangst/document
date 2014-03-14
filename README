@@ -1,9 +1,5 @@
                             The Gotoos Open Source Project Document
 
-Environment: Ubuntu 13.04
-Date: 2013-8-27
-Author: liminghao <vgotoos@gmail.com>
-
 1.Preparation:
 
 $ sudo apt-get install git-core gnupg flex bison gperf build-essential zip curl
@@ -14,10 +10,7 @@ $ sudo apt-get install libsdl1.2-dev
 $ sudo apt-get install dh-autoreconf
 $ sudo apt-get install uboot-mkimage
 
-compiler:
-http://www.mentor.com/embedded-software/sourcery-tools/sourcery-codebench/editions/lite-edition/
-
-2.Get projection:
+2.Get sources:
 
 (1).Download and config repo:
 
@@ -27,11 +20,10 @@ http://www.mentor.com/embedded-software/sourcery-tools/sourcery-codebench/editio
     $ vim ~/.bashrc, add PATH=~/bin:$PATH to the end of ~/.bashrc
   c.Download repo script, this maybe not up-to-date file, you can update to url:
     $ curl https://dl-ssl.google.com/dl/googlesource/git-repo/repo > ~/bin/repo
-    $ curl "http://php.webtutor.pl/en/wp-content/uploads/2011/09/repo" > ~/bin/repo
   d.Add executable authority:
     $ chmod a+x ~/bin/repo
 
-(2).Sync our projection:
+(2).Sync sources and make image:
 
   a.Create a directory:
     $ mkdir ~/gotoos
@@ -39,165 +31,42 @@ http://www.mentor.com/embedded-software/sourcery-tools/sourcery-codebench/editio
     $ repo init -u https://github.com/gotoos/manifest.git -b master
   c.Repo sync:
     $ repo sync -j4
-Note: if have error:
-    git config --global --add core.compression -1
-    git config --global http.postBuffer 24288000
-    if sync codes very slowly, please set proxy:
+  d.Compiler sources
+    $ . build/envsetup.sh
+    $ lunch        # choose target device(default is qemu)
+    $ make
 
-3.Compile qemu:
-  $ cd external/qemu
+3.Install qemu and run gotoos:
+
+(1).Download and install qemu sources:
+  $ git clone https://github.com/qemu/qemu.git
+  $ cd qemu
   $ ./configure --target-list=arm-softmmu --audio-drv-list=alsa
   $ make
   $ sudo make install
 
-4.Compile kernel:
-  $ cd kernel
-  $ export ARCH=arm
-  $ export SUBARCH=arm
-  $ export CROSS_COMPILE=arm-none-eabi-
-  $ make versatile_defconfig
-  $ make menuconfig
-  enable eabi menu options
-  kernel Features -->
-  Memory split (3G/1G user/kernel split) --->
-    [ ] Preemptible Kernel (EXPERIMENTAL)
-    [*] Use the ARM EABI to compile the kernel
-    [*] Allow old ABI binaries to run with this kernel (EXPERIMENTAL)
-    [ ] High Memory Support (EXPERIMENTAL)
-        Memory model (Flat Memory) --->
-    [ ] Add LRU list to track non-evictable pages
-        (4096) Low address space to protect from user allocation
-  make kernel:
-  $ make
-  Test:
-  $ qemu-system-arm -M versatilepb -m 128M -kernel zImage
+(2).run gotoos:
+  $ cd gotoos/out/target/product/qemu/
+  $ emulator kernel ramdisk.img
 
-5.Compile busybox:
-  url: http://busybox.net/downloads/
-  Build Busybox file system
-  If it can not pass build, usually it is because the version of crosstool (gcc/glib) is not correct.
-  configure the build:
-  $ export ARCH=arm
-  $ export CROSS_COMPILE=arm-none-linux-gnueabi-
-  $ make defconfig
-  $ make menuconfig
+4.Send patch to us:
 
-  Busybox Settings --> Build Options -->
-    [*] Build BusyBox as a static binary (no shared libs)
-    [ ] Force NOMMU build
-    [*] Build with Large File Support (for accessing files > 2 GB)
-    ()  Cross Compiler prefix
-    ()  Additional CFLAGS
+(1).Modify some files.
 
-  $ make install
-  $ mkdir rootfs
-  $ mkdir proc sys dev etc etc/init.d
+(2).Make patch:
+    $ git add file1, file2
+    $ git commit -s
+Input some message as following:
+Line 1：Commit Message Sample
+Line 2：
+Line 3：N/A
+Line 4：
+Line 5：This is a sample of gotoos commit message. Please follow this.
+Line 6：Signed-off-by: liminghao <vgotoos@gmail.com>
+    $ git format-patch gotoos/seed -o out_patch/
 
-  create the file _install/etc/init.d/rcS
-    #!/bin/sh
-    mount -t proc none /proc
-    mount -t sysfs none /sys
-    /sbin/mdev -s
+(3).Use a email box by yourself and attach the patch and send to us:
 
-  and change it to executable:
-  $ chmod +x _install/etc/init.d/rcS
-  $ cp -a _install/* rootfs/
-
-  make the root image:
-  $ cd rootfs
-  $ find . | cpio -o --format=newc > ../rootfs.img
-  $ gzip -c rootfs.img > rootfs.img.gz
-
-  test our new images:
-  $ qemu-system-arm -M versatilepb -m 128M -kernel kernel -initrd ramdisk.img -append "root=/dev/ram rdinit=/init"
-
-6.Compile uboot:
-  Download: url - ftp://ftp.denx.de/pub/u-boot/
-  Build image:
-  $ export CROSS_COMPILE=arm-eabi-
-  $ make versatilepb_config
-  $ make
-  Make U-images:
-  $ mkimage -A arm -C none -O linux -T kernel -d zImage -a 0x00010000 -e 0x00010000 zImage.uimg
-  $ mkimage -A arm -C none -O linux -T ramdisk -d rootfs.img.gz -a 0x00800000 -e 0x00800000 rootfs.uimg
-  $ dd if=/dev/zero of=flash.bin bs=1 count=6M
-  $ dd if=u-boot.bin of=flash.bin conv=notrunc bs=1
-  $ dd if=zImage.uimg of=flash.bin conv=notrunc bs=1 seek=2M
-  $ dd if=rootfs.uimg of=flash.bin conv=notrunc bs=1 seek=4M
-  Boot linux:
-  $ qemu-system-arm -M versatilepb -m 128M -kernel flash.bin -serial stdio
-
-7.Config email:
-
-(1).Install mutt and msmtp
-
-    $ sudo apt-get install mutt
-    $ sudo apt-get install msmtp
-
-(2).Config mutt and msmtp as follows：
-
-    Firstly, config mutt in file "~/.muttc" for current user as follows:
-
-    set sendmail="/usr/bin/msmtp"
-    set use_from=yes
-    set realname="vgotoos"
-    set from=vgotoos@gmail.com
-    set envelope_from=yes
-
-    Secondly, config msmtp in file "~/.msmtprc" for current user as follows:
-
-    a.create files are "~/.msmtprc" and " ~/.msmtp.log" as configure and log:
-
-    account default
-    host smtp.corpease.net
-    from vgotoos@gmail.com
-    auth plain
-    user vgotoos@gmail.com
-    password xxxxxxx
-    logfile ~/.msmtp.log
-
-    b.modify to authority for "~/.msmtprc":
-
-    $ chmod 600 .msmtprc
-    $ touch ~/.msmtp.log
-
-    c.send test email:
-
-    $ msmtp --host=smtp.corpease.net --serverinfo
-    . send to a peple:
-    $ echo "hello world" | mutt -s "title" username@gmail.com(can use qq mail).
-    . send to soms peples, cc, attach files:
-    $ echo "hello" | mutt -s "title" vogotoos@gmail.com,user2@gmail.com -c user3@gmail.com -a /tmp/ip.tmp
-
-8.Send patch to us:
-
-(1).Modify to files.
-
-(2).git add file1, file2
-    Note: file1, file2 is yourself have modified
-
-(3).git commit -s
-    Input message as follows:
-      Line 1：Commit Message Sample
-      Line 2：
-      Line 3：N/A
-      Line 4：
-      Line 5：This is a sample of gotoos commit message. Please follow this.
-      Line 6：Signed-off-by: liminghao <vgotoos@gmail.com>
-
-(4).git format-patch gotoos/seed -o out_patch/
-    Note: out_patch is the path of your patch
-
-(5).git send-email --to vgotoos@gmail.com out_patch/patch
-    Note: patch is the file of your patch
-
-9.lua
-  make linux MYLIBS=-ltermcap
-  url: http://www.lua.org/ftp/
-
-10.readline
-   url: http://fossies.org/linux/misc/readline
-  $ ./configure
-  $ make
-  $ sudo make install
-  $ sudo ldconfig
+mail list as following:
+A. <vgotoos@gmail.com>
+B. <shuntongzhang@gmail.com>
